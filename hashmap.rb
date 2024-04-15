@@ -46,6 +46,18 @@ class HashMap
     @buckets.map! { nil }
   end
 
+  def keys
+    @buckets.compact.map { |pair| pair[0] }
+  end
+
+  def values
+    @buckets.compact.map { |pair| pair[1] }
+  end
+
+  def entries
+    @buckets.compact
+  end
+
   def has?(key)
     index = index_from_key(key)
 
