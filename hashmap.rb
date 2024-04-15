@@ -13,15 +13,29 @@ class HashMap
   end
 
   def get(key)
+    return nil unless has?(key)
+
     index = index_from_key(key)
 
     verify_index(index)
 
     pair_retrieved = @buckets[index]
 
-    return nil if pair_retrieved.nil?
-
     pair_retrieved[1] if pair_retrieved[0] == key
+  end
+
+  def remove(key)
+    return nil unless has?(key)
+
+    index = index_from_key(key)
+
+    verify_index(index)
+
+    value_retrieved = @buckets[index][1]
+
+    @buckets.delete_at(index)
+
+    value_retrieved
   end
 
   def has?(key)
