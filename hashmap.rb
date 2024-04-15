@@ -12,6 +12,18 @@ class HashMap
     @buckets[index] = [key, value]
   end
 
+  def get(key)
+    index = index_from_key(key)
+
+    verify_index(index)
+
+    pair_retrieved = @buckets[index]
+
+    return nil if pair_retrieved.nil?
+
+    pair_retrieved[1] if pair_retrieved[0] == key
+  end
+
   def hash(key)
     hash_code = 0
     prime_number = 31
