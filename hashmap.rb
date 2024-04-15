@@ -1,5 +1,7 @@
 # Implementation of a hashmap
 class HashMap
+  LOAD_FACTOR = 0.75
+
   def initialize
     @buckets = Array.new(16) { nil }
   end
@@ -8,6 +10,8 @@ class HashMap
     index = index_from_key(key)
 
     verify_index(index)
+
+    grow if grow?
 
     @buckets[index] = [key, value]
   end
@@ -81,6 +85,20 @@ class HashMap
 
   def capacity
     @buckets.size
+  end
+
+  def grow?
+    threshold = capacity * LOAD_FACTOR
+
+    length >= threshold
+  end
+
+  def grow
+    old_buckets = @buckets.compact
+
+    @buckets = Array.new(capacity * 2) { nil }
+
+    old_buckets.each { |pair| set(pair[0], pair[1]) }
   end
 
   private
