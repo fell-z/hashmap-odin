@@ -38,6 +38,14 @@ class HashMap
     value_retrieved
   end
 
+  def length
+    @buckets.compact.size
+  end
+
+  def clear
+    @buckets.map! { nil }
+  end
+
   def has?(key)
     index = index_from_key(key)
 
