@@ -1,3 +1,5 @@
+require_relative "./linked_list"
+
 # Implementation of a hashmap
 class HashMap
   LOAD_FACTOR = 0.75
@@ -6,14 +8,36 @@ class HashMap
     @buckets = Array.new(16) { nil }
   end
 
+  def has?(key)
+    index = index_from_key(key)
+
+    pair_retrieved = @buckets[index]
+
+    return pair_retrieved.has?(key) if pair_retrieved.is_a?(LinkedList)
+
+    return false if pair_retrieved.nil?
+
+    pair_retrieved[0] == key
+  end
+
   def set(key, value)
     index = index_from_key(key)
 
-    verify_index(index)
-
     grow if grow?
 
-    @buckets[index] = [key, value]
+    pair_retrieved = @buckets[index]
+
+    if pair_retrieved.is_a?(LinkedList)
+      return pair_retrieved.update(key, value) if pair_retrieved.has?(key)
+
+      return pair_retrieved.append([key, value])
+    end
+
+    if pair_retrieved.nil? || pair_retrieved[0] == key
+      @buckets[index] = [key, value]
+    elsif pair_retrieved[0] != key
+      @buckets[index] = LinkedList.new(pair_retrieved, [key, value])
+    end
   end
 
   def get(key)
@@ -21,29 +45,40 @@ class HashMap
 
     index = index_from_key(key)
 
-    verify_index(index)
-
     pair_retrieved = @buckets[index]
 
-    pair_retrieved[1] if pair_retrieved[0] == key
+    return pair_retrieved.get(key) if pair_retrieved.is_a?(LinkedList)
+
+    pair_retrieved[1]
   end
 
   def remove(key)
-    return nil unless has?(key)
-
     index = index_from_key(key)
 
-    verify_index(index)
+    pair_retrieved = @buckets[index]
+    if pair_retrieved.is_a?(LinkedList)
+      return nil unless pair_retrieved.has?(key)
 
-    value_retrieved = @buckets[index][1]
+      removed_value = pair_retrieved.remove(key)
 
-    @buckets.delete_at(index)
+      @buckets[index] = pair_retrieved.head.pair if pair_retrieved.length == 1
 
-    value_retrieved
+      return removed_value
+    end
+
+    return nil unless has?(key)
+
+    @buckets[index] = nil
+
+    pair_retrieved[1]
   end
 
   def length
-    @buckets.compact.size
+    @buckets.compact.reduce(0) do |total, bucket|
+      next total + bucket.length if bucket.is_a?(LinkedList)
+
+      total + 1
+    end
   end
 
   def clear
@@ -51,27 +86,27 @@ class HashMap
   end
 
   def keys
-    @buckets.compact.map { |pair| pair[0] }
+    @buckets.compact.map do |bucket|
+      next bucket.keys if bucket.is_a?(LinkedList)
+
+      bucket[0]
+    end.flatten
   end
 
   def values
-    @buckets.compact.map { |pair| pair[1] }
+    @buckets.compact.map do |bucket|
+      next bucket.values if bucket.is_a?(LinkedList)
+
+      bucket[1]
+    end.flatten
   end
 
   def entries
-    @buckets.compact
-  end
+    @buckets.compact.map do |bucket|
+      next bucket.pairs if bucket.is_a?(LinkedList)
 
-  def has?(key)
-    index = index_from_key(key)
-
-    verify_index(index)
-
-    pair_retrieved = @buckets[index]
-
-    return false if pair_retrieved.nil?
-
-    pair_retrieved[0] == key
+      [bucket]
+    end.flatten(1)
   end
 
   def hash(key)
@@ -94,7 +129,7 @@ class HashMap
   end
 
   def grow
-    old_buckets = @buckets.compact
+    old_buckets = entries
 
     @buckets = Array.new(capacity * 2) { nil }
 
@@ -104,7 +139,9 @@ class HashMap
   private
 
   def index_from_key(key)
-    hash(key) % capacity
+    index = hash(key) % capacity
+    verify_index(index)
+    index
   end
 
   def verify_index(index)
